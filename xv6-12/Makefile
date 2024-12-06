@@ -225,7 +225,7 @@ internal_fs_%: mkfs
 	dd if=/dev/zero of=$@ count=80
 	./mkfs $@ 1
 
-fs.img: mkfs README $(INTERNAL_DEV) _init #$(UPROGS)
+fs.img: mkfs README $(INTERNAL_DEV) _init _ps #$(UPROGS)
 	./mkfs fs.img 0 README $(UPROGS) $(INTERNAL_DEV)
 
 -include *.d
