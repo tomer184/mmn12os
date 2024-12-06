@@ -44,6 +44,8 @@ int printmounts(void);
 int printdevices(void);
 int unshare(int);
 
+int cps166(void);
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
