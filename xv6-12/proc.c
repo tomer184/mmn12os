@@ -38,116 +38,39 @@ static void wakeup1(void *chan);
 
 
 int
-cps182() {
-    struct proc *p;
-
-    // Enable interrupts on this processor.
-    sti();
-    int ppid, extpid;
-
-    // Loop over process table looking for process with pid.
-    acquire(&ptable.lock);
-
-    cprintf("name \t pid \t state \t \t extpid \t ppid \t cputime \n");
-
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-        ppid = (p->pids[0].pid == 1 && p->pids[1].pid == 0) ? 0
-                                                            : p->parent->ns_pid; // for `init` process, ppid is 0
-        extpid = p->pids[1].pid != 0 ? p->pids[1].pid : p->pids[0].pid;
-
-        if (p->state == SLEEPING || p->state == RUNNABLE)
-            cprintf("%s \t %d  \t SLEEPING \t %d \t \t %d \t %d \n ", p->name, p->ns_pid, extpid, ppid, p->cpu_time);
-        else if (p->state == RUNNING)
-            cprintf("%s \t %d  \t RUNNING \t %d \t \t %d \t %d \n ", p->name, p->ns_pid, extpid, ppid, p->cpu_time);
-    }
-
-    release(&ptable.lock);
-
-    return 0;
-}
-
-
-int
-cps108() {
+cps166()
+{
   struct proc *p;
 
-  sti();  // Enable interrupts
-  acquire(&ptable.lock);  // Acquire lock on process table for safe access
-  cprintf("name \t pid \t state \t \t extpid \t ppid \t cputime \n");
-
-  // Iterate over all processes in the process table
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-
-  int pid = p->ns_pid;  // Get the process id
-  int extpid = p->pids[0].pid;  // Get the external process id
-	// int ppid = pid == 1 ? 0 : p->parent->ns_pid;  // Get the parent process id
-  int ppid;
-  if (p->parent == 0) {
-    ppid = 0;
-  } else {
-    ppid = p->parent->ns_pid;
-  }
-
-	unsigned int cpu_time = p->cpu_time;  // Get the cpu time of the process
-
-   // We don't have nested containers so there will be one container at most
-	 if(p->pids[1].pid != 0) {
-		 extpid = p->pids[1].pid;
-		 ppid = p->parent->pids[0].pid;
-	 }
-
-	 if (p->state == SLEEPING || p->state == RUNNABLE || p->state == ZOMBIE) {
-	   cprintf("%s \t %d \t SLEEPING \t %d \t \t %d \t %d \n", p->name, pid, extpid, ppid, cpu_time);
-	 } else if (p->state == RUNNING) {
-	   cprintf("%s \t %d \t RUNNING \t %d \t \t %d \t %d \n", p->name, pid, extpid, ppid, cpu_time);
-	 }
-  }
-
-  release(&ptable.lock);
-  return 33; //cps syscall number
-}
-
-
-int
-cps166() {
-  struct proc *p;
-
-  sti();  // Enable interrupts
-  acquire(&ptable.lock);  // Acquire lock on process table for safe access
+  sti();                 // Enable interrupts
+  acquire(&ptable.lock); // Acquire lock on process table for safe access
   cprintf("name \t pid \t state \t \t extpid \t ppid \t cputime \n");
 
   int extpid;
   int ppid;
 
   // Iterate over all processes in the process table
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    // Get the process id
+    int pid = p->ns_pid;
+    // Get the external process id
+    int extpid = (p->pids[1].pid != 0) ? p->pids[1].pid : p->ns_pid;
+    // Get the parent process id, taking into account the init process
+    int ppid = (p->pids[1].pid == 0 && p->pids[0].pid == 1) ? 0 : p->parent->ns_pid;
+    // Get the cpu time of the process
+    unsigned int cpu_time = p->cpu_time;
 
-  int pid = p->ns_pid;  // Get the process id
+    // If the process is in the RUNNING state, print the process as RUNNING
+    if (p->state == RUNNING)
+      cprintf("%s \t %d \t RUNNING \t %d \t \t %d \t %d \n", p->name, pid, extpid, ppid, cpu_time);
+    // If the process in any other state other than RUNNING, print the process as SLEEPING (all states taken from proc.h)
+    else if (p->state == SLEEPING || p->state == RUNNABLE || p->state == ZOMBIE || p->state == EMBRYO || p->state == UNUSED)
+      cprintf("%s \t %d \t SLEEPING \t %d \t \t %d \t %d \n", p->name, pid, extpid, ppid, cpu_time);
 
-  if(p->pids[1].pid != 0)
-    extpid = p->pids[1].pid;
-  else
-    extpid = p->ns_pid;
-
-  if(p->parent == 0 && p->ns_pid == 1)
-    ppid = 0;
-  else
-    ppid = p->parent->ns_pid;
-
-
-	unsigned int cpu_time = p->cpu_time;  // Get the cpu time of the process
-
-   // We don't have nested containers so there will be one container at most
-
-	 if (p->state == SLEEPING || p->state == RUNNABLE || p->state == ZOMBIE) {
-	   cprintf("%s \t %d \t SLEEPING \t %d \t \t %d \t %d \n", p->name, pid, extpid, ppid, cpu_time);
-	 } else if (p->state == RUNNING) {
-	   cprintf("%s \t %d \t RUNNING \t %d \t \t %d \t %d \n", p->name, pid, extpid, ppid, cpu_time);
-	 }
+    release(&ptable.lock);
+    return 33;  // The syscall number for cps166
   }
-
-  release(&ptable.lock);
-  return 33; //cps syscall number
 }
 
 
